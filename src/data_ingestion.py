@@ -9,26 +9,38 @@ from data_models import WeatherRecord
 logging.basicConfig(
     filename='data_ingestion.log', #log file name
     level=logging.INFO, #Log level
-    format='%(asctime)s - %(levelname)s - %(message)s' #Log message Format
+    format='%(asctime)s - %(levelname)s - %(message)s' # Log message Format
 )
 
+# Extract directory of current script
 script_dir = os.path.dirname(os.path.abspath(__file__))
+
 # Define path to directory containing weather data
 WX_DATA_PATH = os.path.join(script_dir,'..','wx_data')
 
+
 def ingest_weather_data(file_path, session):
-    start_time = datetime.now() #Record the start time of the ingestion process
+    """ Ingest data from raw text files into database. """
+    
+    # Record the start time of the ingestion process
+    start_time = datetime.now() 
+    
     logging.info(f'Starting ingestion for file: {os.path.basename(file_path)} at {start_time}')
     print(f'Starting ingestion for file: {os.path.basename(file_path)} at {start_time}')
-    records_to_insert = [] #list to hold records to be inserted
-    records_ingested = 0 # counter for records ingested
-    duplicate_records = 0 # COunter for duplicate records
+    
+    records_to_insert = [] # List to hold records to be inserted
+    records_ingested = 0 # Counter for records ingested
+    duplicate_records = 0 # Counter for duplicate records
 
     with open(file_path, 'r') as file:
-        station_id = os.path.basename(file_path).split('.')[0]  # Extract station ID from file name
+        # Extract station ID from file name
+        station_id = os.path.basename(file_path).split('.')[0]  
+        
         for line in file:
             date_str, max_temp, min_temp, precipitation = line.strip().split('\t')
-            date = datetime.strptime(date_str, '%Y%m%d').date() # Convert date string to date object
+            
+            # Convert date string to date object
+            date = datetime.strptime(date_str, '%Y%m%d').date() 
 
             if max_temp == '-9999':
                 max_temp = None
@@ -71,6 +83,7 @@ def ingest_weather_data(file_path, session):
                 session.rollback()  # Roll back the transaction
                 duplicate_records += 1 # Update the count of duplicate records
 
+    # Log ingestion process for each file
     end_time = datetime.now()
     logging.info(f'File: {file_path}')
     logging.info(f'Start Time: {start_time}')
@@ -78,11 +91,13 @@ def ingest_weather_data(file_path, session):
     logging.info(f'Records Ingested: {records_ingested}')
     logging.info(f'Duplicate Records: {duplicate_records}')
 
+     # Print summary of ingestion process for each file
     print(f"End Time: {end_time}")
     print(f"Records Ingested: {records_ingested}")
     print(f"Duplicate Records: {duplicate_records}")
 
     return records_ingested, duplicate_records
+
 
 def main():
     # Connect to the database
@@ -97,24 +112,28 @@ def main():
         for file in files:
             file_path = os.path.join(root, file) # Get the full path of the file
             records_ingested, duplicate_records = ingest_weather_data(file_path, session)
+            
             # Update totals
             total_records_ingested += records_ingested
             total_duplicate_records += duplicate_records
 
     main_end_time = datetime.now() # Record the end time of the main ingestion process
     total_time = main_end_time - main_start_time # Calculate the total time taken
+    
     # Log the summary of the ingestion process
     logging.info(f'Total Ingestion Start Time: {main_start_time}')
     logging.info(f'Total Ingestion End Time: {main_end_time}')
     logging.info(f'Total Time: {total_time}')
     logging.info(f'Total Records Ingested: {total_records_ingested}')
     logging.info(f'Total Duplicate Records: {total_duplicate_records}')
+    
     # Print the summary of the ingestion process
     print(f"Total Ingestion Start Time: {main_start_time}")
     print(f"Total Ingestion End Time: {main_end_time}")
     print(f"Total Time: {total_time}")
     print(f"Total Records Ingested: {total_records_ingested}")
     print(f"Total Duplicate Records: {total_duplicate_records}")
+
 
 if __name__ == "__main__":
     main()
